@@ -272,6 +272,8 @@ This project uses activator. To install activator, follow the instructions [here
 
 In order to work on this repo in Intellij, you should install the SBT and Scala plugins. Clone the project, and choose 'Import from Existing sources', with SBT option. Intellij will automatically download any dependencies needed (stored in build.sbt), and index all files.
  
-This project requires redis in order to run. To run locally, we suggest installing docker, and running `docker run -p 6379:6379 redis redis-server --notify-keyspace-events AKE`.  
+This project requires redis in order to run. To run locally, we suggest installing docker, and running `docker run -p 6379:6379 redis redis-server --notify-keyspace-events AKE`. In addition, you have to change `<project-root>/conf/application.conf`'s `redis.host` value from `"redis"` to `"localhost"`.
 
-Finally, to run the project from the command line, execute ```activator compile``` from the project root. Then execute `activator run`. To see if everything works, go to `http://localhost:9000` in your browser. You should see json corresponding to parking lot status. We will eventually create a Dockerfile to make the backend easier to deploy. More detailed instructions can be found on the Play! framework website.
+Finally, to run the project from the command line, execute ```activator compile``` from the project root. Then execute `activator run`. To see if everything works, go to `http://localhost:9000/lots` in your browser. You should see json corresponding to parking lot status. More detailed instructions can be found on the Play! framework website.
+
+We have also created a Docker image for ease of deployment. To run the entire application (redis and backend), make sure you have docker installed, and execute `make run` from the project root. This will use docker-compose to launch a Redis container and the backend container.   
