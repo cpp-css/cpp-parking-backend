@@ -1,3 +1,4 @@
+import actors.ClientActor;
 import actors.ClientManager;
 import annotations.AllParkingState;
 import annotations.RedisSubscriberRunnable;
@@ -34,6 +35,7 @@ public class Module extends AbstractModule implements AkkaGuiceSupport {
         bind(Runnable.class)
                 .annotatedWith(RedisSubscriberRunnable.class)
                 .to(RedisSubscriber.class);
+        bindActorFactory(ClientActor.class, ClientActor.Factory.class);
 
     }
 
