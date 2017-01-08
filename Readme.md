@@ -3,15 +3,15 @@
 ## What is the PSI Backend?
 This repo holds all parking data moderation logic. It is a webserver that provides a REST interface to updating and reading all parking lot occupancy levels.
 
-## Technology
+### Technology
 Our webserver is built on the [Play! framework](https://www.playframework.com/). We chose this framework out of the dozens of technologies out there because it supports Java (which is nice since Cal Poly is a Java school), and because it is well suited to asynchronous highly-concurrent tasks using [Akka](http://akka.io/). The main advantage of Play for us is Akka's [Actor Model](http://doc.akka.io/docs/akka/2.4/general/actors.html)- which gives us an abstraction to hundreds of thousands of lightweight threads with independent state. We also use Play's built-in [Guice dependency injection](https://www.playframework.com/documentation/2.5.x/JavaDependencyInjection) framework. However, that's not to say it's perfect. Documentation for the newer actor-websocket model is [lacking](https://github.com/playframework/playframework/issues/5057), and Scala is more of a first class citizen in the framework than Java. 
 
 Our webserver is also dependent upon [Redis](https://redis.io/) as a data store; all state update requests are passed on as [*HINCRBY*](https://redis.io/commands/hincrby) requests to Redis, and state queries are performed by [*HGETALL*](https://redis.io/commands/hgetall) requests to Redis. We designed the backend architecture with Redis in mind to ensure easy horizontal scalability.  
  
 
-##Architecture
+## Architecture
 
-###Scalability
+### Scalability
 
 So how exactly do we achieve scalability?
 
@@ -28,7 +28,39 @@ The main source of potential slowdown in our application is network requests to 
 So even if we have all 30,000 people at Cal Poly connect to 3-4 webservers, we should still scale fine, since Redis will still get approximately the same number of requests. By dividing the data layer and network layer, we can scale up our backends as necessary for more traffic w/o increasing load on Redis.
 
 
-###Implementation
+### Diagram
+
+Let's follow the flow of data.
+
+![HttpPost](readmeImages/HttpPost.png)
+
+ The Ingress/Egress monitors send an Http Post to a backend proxied by the load balancer.
+  
+  
+  
+![RedisIncrBy](readmeImages/RedisHincrby.png)
+
+The backend server parses the json payload of the Http Post, and sends an HINCRBY request to Redis, to update the appropriate parking lot's data.
+
+
+![RedisPub](readmeImages/RedisPub.png)
+
+Redis will update its parking lot data, and publish a notification saying that its data has been modified. All of the backend servers are listening to these notifications.
+
+
+![UpdateQuery](readmeImages/UpdateQuery.png)
+
+All backends query Redis for the updated state, and cache that state locally.
+
+
+![ClientWebsocket](readmeImages/ClientWebsocket.png)
+
+All backends will push their updated state to any clients connected via websocket.
+ 
+ 
+
+
+### Implementation
 
 Down to the nitty gritty. How does the code work?
 
