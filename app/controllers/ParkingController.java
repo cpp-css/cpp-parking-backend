@@ -2,6 +2,7 @@ package controllers;
 
 import actors.messages.ClientActorCreate;
 import actors.messages.CurrentStateRequest;
+import actors.messages.JsonNodeMessage;
 import akka.NotUsed;
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
@@ -76,7 +77,7 @@ public class ParkingController extends Controller {
         //https://www.playframework.com/documentation/2.5.x/JavaAkka#Creating-and-using-actors
         return FutureConverters.toJava(
                 ask(clientManager, new CurrentStateRequest(), 1000)
-        ).thenApply(response -> ok((JsonNode) response));
+        ).thenApply(response -> ok(((JsonNodeMessage) response).getJson()));
     }
 
     //websocket-actor is very confusing and not well documented
