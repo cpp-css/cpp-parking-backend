@@ -1,7 +1,7 @@
 package actors.messages;
 
 /**
- * Created by brianzhao on 1/7/17.
+ *  message sent when a clientactor is started, to the clientmanager
  */
 public class ConnectionCreated {
 
