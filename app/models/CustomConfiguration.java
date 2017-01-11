@@ -33,7 +33,7 @@ public class CustomConfiguration {
     }
 
     public List<ParkingLot> getParkingLots() {
-        // Super hacky, stupid Play Framework api doesn't let you parse stuff easily
+        // Super hacky, stupid Play Framework api doesn't let you parse config easily
         String jsonString = gson.toJson(configuration.asMap().get("lots"));
         Type type = new TypeToken<List<ParkingLot>>() {
         }.getType();
@@ -41,7 +41,11 @@ public class CustomConfiguration {
     }
 
 
-    public String getRedisKeySpaceChannel() {
+    public String getRedisPatternChannelsWildcard() {
+        return getRedisPatternChannelsPrefix() + "*";
+    }
+
+    public String getRedisPatternChannelsPrefix() {
         return "__keyspace@" + String.valueOf(configuration.getInt("redis.database"))
                 + "__:" + getRedisKey();
     }

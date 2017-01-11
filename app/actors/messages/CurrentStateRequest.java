@@ -1,7 +1,7 @@
 package actors.messages;
 
 /**
- * Created by brianzhao on 1/7/17.
+ * message sent by parkingcontroller to clientmanager asking for full state
  */
 public class CurrentStateRequest {
 }

@@ -1,7 +1,8 @@
 package actors.messages;
 
 /**
- * Created by brianzhao on 1/7/17.
+ * Message sent when clientactor actor is killed
+ * happens when websocket closes
  */
 public class ConnectionClosed {
 }

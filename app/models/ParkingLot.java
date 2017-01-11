@@ -1,22 +1,24 @@
 package models;
 
 /**
- * Created by brianzhao on 1/7/17.
+ * Model of parking lot
+ * is schema of json in play config
+ * also used as object in clientManager's state
  */
 public class ParkingLot {
     private final String name;
-    private int numParked;
+    private int occupancy;
     private final int maxCapacity;
 
-    public ParkingLot(String name, int numParked, int maxCapacity) {
+    public ParkingLot(String name, int occupancy, int maxCapacity) {
         this.name = name;
-        this.numParked = numParked;
+        this.occupancy = occupancy;
         this.maxCapacity = maxCapacity;
     }
 
     public ParkingLot(ParkingLot other) {
         this.name = other.name;
-        this.numParked = other.numParked;
+        this.occupancy = other.occupancy;
         this.maxCapacity = other.maxCapacity;
     }
 
@@ -41,8 +43,8 @@ public class ParkingLot {
     }
 
 
-    public int getNumParked() {
-        return numParked;
+    public int getOccupancy() {
+        return occupancy;
     }
 
 
@@ -50,15 +52,15 @@ public class ParkingLot {
         return maxCapacity;
     }
 
-    public void setNumParked(int numParked) {
-        this.numParked = numParked;
+    public void setOccupancy(int occupancy) {
+        this.occupancy = occupancy;
     }
 
     @Override
     public String toString() {
         return "ParkingLot{" +
                 "name='" + name + '\'' +
-                ", numParked=" + numParked +
+                ", occupancy=" + occupancy +
                 ", maxCapacity=" + maxCapacity +
                 '}';
     }

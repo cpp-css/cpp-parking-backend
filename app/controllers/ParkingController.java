@@ -2,7 +2,6 @@ package controllers;
 
 import actors.messages.ClientActorCreate;
 import actors.messages.CurrentStateRequest;
-import actors.messages.JsonNodeMessage;
 import akka.NotUsed;
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
@@ -11,24 +10,38 @@ import akka.japi.Pair;
 import akka.stream.Materializer;
 import akka.stream.OverflowStrategy;
 import akka.stream.javadsl.*;
+import annotations.MidnightSyncRunnable;
 import annotations.RedisSubscriberRunnable;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.google.inject.name.Named;
+import models.IncomingLotUpdate;
 import org.reactivestreams.Publisher;
 import play.libs.F;
+import play.libs.Json;
 import play.mvc.*;
 import scala.compat.java8.FutureConverters;
 import scala.concurrent.duration.Duration;
 import services.RedisUpdater;
+import utils.ExceptionUtils;
 
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 import static akka.pattern.Patterns.ask;
 
+/**
+ * This is the main class where all of our endpoints are defined
+ * Also servers as instantiation point of 2 background services:
+ *  1. redis subscriber thread
+ *  2. the sync background thread in rare case of network drops
+ *  to redis (which should never happen), we will monitor if this ever happens in production
+ */
 @Singleton
 public class ParkingController extends Controller {
 
@@ -45,43 +58,84 @@ public class ParkingController extends Controller {
                              @Named("clientManagerActor") ActorRef clientManager,
                              RedisUpdater redisUpdater,
                              @RedisSubscriberRunnable Runnable redisSubscriber,
+                             @MidnightSyncRunnable Runnable midnightSync,
                              Materializer materializer) {
+
         this.logger = logger;
         this.clientManager = clientManager;
         this.actorSystem = actorSystem;
         this.redisUpdater = redisUpdater;
         this.materializer = materializer;
+
+        //schedule background thread to subscribe to Redis notifications
         this.actorSystem.scheduler().scheduleOnce(
                 Duration.create(1, TimeUnit.NANOSECONDS),
                 redisSubscriber,
                 actorSystem.dispatcher()
         );
+
+        //once a day, every midnight, perform a sync of redis state
+        //just in case there was a missed notification day
+        this.actorSystem.scheduler().schedule(
+                Duration.create(timeTilMidnight(), TimeUnit.MILLISECONDS),
+                Duration.create(24, TimeUnit.HOURS),
+                midnightSync,
+                actorSystem.dispatcher()
+        );
+
+    }
+
+    /**
+     * health check endpoint, should be up if server is up
+     * @return 200 ok
+     */
+    public Result health() {
+        return ok("Server is up!");
     }
 
 
+    /**
+     * raspberry pi update endpoint
+     * get json from payload + send update to Redis
+     * @return ok if json was parsed correctly + Redis update successful
+     */
     public Result update() {
         JsonNode json = request().body().asJson();
         if (json == null) {
             return badRequest("Expecting Json data");
         } else {
-            String parkingLotName = json.findPath("name").textValue();
-            int hincrby = json.findPath("diff").intValue();
-            logger.info(String.format("Applying diff %d to lot %s", hincrby, parkingLotName));
-            this.redisUpdater.updateParkingState(parkingLotName, hincrby);
-            return ok();
+            try {
+                IncomingLotUpdate lotChange = Json.fromJson(json, IncomingLotUpdate.class);
+                this.redisUpdater.updateParkingLotOccupancy(lotChange.getLot(), lotChange.getDiff());
+                logger.info(String.format("updated lot %s by %d", lotChange.getLot(), lotChange.getDiff()));
+                return ok();
+            } catch (RuntimeException e) {
+                logger.warning(ExceptionUtils.getStackTrace(e));
+                return internalServerError();
+            }
         }
     }
 
+    /**
+     * gets latest known state of all parking lots back in json
+     * @return
+     */
     public CompletionStage<Result> status() {
         //taken straight from documentation
         //https://www.playframework.com/documentation/2.5.x/JavaAkka#Creating-and-using-actors
-        return FutureConverters.toJava(
-                ask(clientManager, new CurrentStateRequest(), 1000)
-        ).thenApply(response -> ok(((JsonNodeMessage) response).getJson()));
+        return FutureConverters.toJava(ask(clientManager, new CurrentStateRequest(), 1000)
+        ).thenApply(response -> ok((JsonNode) response));
     }
 
-    //websocket-actor is very confusing and not well documented
-    //all of the code below this line was taken from: https://github.com/playframework/play-websocket-java
+
+    /**
+     * websocket-actor is very confusing and not well documented
+     * all of the code below this line was taken from:
+     * https://github.com/playframework/play-websocket-java
+     *
+     * essentially, create a json websocket, tied to a new ClientActor
+     * @return
+     */
     public WebSocket ws() {
         return WebSocket.Json.acceptOrResult(request -> {
             final CompletionStage<Flow<JsonNode, JsonNode, NotUsed>> future = wsFutureFlow(request);
@@ -149,7 +203,6 @@ public class ParkingController extends Controller {
         return flow.watchTermination((ignore, termination) -> {
             termination.whenComplete((done, throwable) -> {
                 logger.info(String.format("Terminating actor %s", clientActor));
-//                clientManager.tell(new ConnectionClosed(), clientActor);
                 actorSystem.stop(clientActor);
             });
 
@@ -163,5 +216,19 @@ public class ParkingController extends Controller {
         logger.severe(String.format("Cannot create websocket: %s", throwable.toString()));
         Result result = Results.internalServerError("error");
         return F.Either.Left(result);
+    }
+
+
+    /**
+     * gets the number of milliseconds from current execution time till midnight
+     * @return milliseconds to midnight
+     */
+    private long timeTilMidnight() {
+        //http://stackoverflow.com/a/32683993
+        ZoneId zoneId = ZoneId.of( "America/Montreal" );
+        ZonedDateTime now = ZonedDateTime.now( zoneId );
+        LocalDate tomorrow = now.toLocalDate().plusDays(1);
+        ZonedDateTime tomorrowStart = tomorrow.atStartOfDay( zoneId );
+        return java.time.Duration.between(now, tomorrowStart).toMillis();
     }
 }

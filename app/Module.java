@@ -1,12 +1,14 @@
 import actors.ClientActor;
 import actors.ClientManager;
 import annotations.AllParkingState;
+import annotations.MidnightSyncRunnable;
 import annotations.RedisSubscriberRunnable;
 import com.google.inject.AbstractModule;
 import com.google.inject.TypeLiteral;
 import models.ParkingLot;
 import play.libs.akka.AkkaGuiceSupport;
 import providers.InitialParkingStateProvider;
+import services.MidnightSync;
 import services.RedisSubscriber;
 
 import java.util.Map;
@@ -21,7 +23,7 @@ import java.util.Map;
  * adding `play.modules.enabled` settings to the `application.conf`
  * configuration file.
  *
- * todo check if we have to do the following:
+ * todo if we want to switch to slf4j
  * http://forkbomb-blog.de/2012/slf4j-logger-injection-with-guice
  */
 public class Module extends AbstractModule implements AkkaGuiceSupport {
@@ -35,8 +37,10 @@ public class Module extends AbstractModule implements AkkaGuiceSupport {
         bind(Runnable.class)
                 .annotatedWith(RedisSubscriberRunnable.class)
                 .to(RedisSubscriber.class);
+        bind(Runnable.class)
+                .annotatedWith(MidnightSyncRunnable.class)
+                .to(MidnightSync.class);
         bindActorFactory(ClientActor.class, ClientActor.Factory.class);
-
     }
 
 }

@@ -33,23 +33,23 @@ public class RedisSubscriber extends JedisPubSub implements Runnable {
         this.clientManager = clientManager;
     }
 
+    @Override
+    public void onMessage(String channel, String message) {
+        logger.info(String.format("Message: channel: %s, message: %s",channel,message));
+    }
+
     /**
-     * this is called whenever an update occurred to the cpp parking hashmap in redis
-     * all of the other callbacks aren't really useful
+     * this is called whenever an update occurred to any cpp parking lot key in redis
+     * all of the other callbacks aren't useful to us
      * @param channel
      * @param message
      */
     @Override
-    public void onMessage(String channel, String message) {
-        logger.info(String.format("Message: channel: %s, message: %s",channel,message));
-        clientManager.tell(new NewState(), ActorRef.noSender());
-    }
-
-
-    @Override
     public void onPMessage(String pattern, String channel, String message) {
         logger.info(String.format("Message from: pattern: %s, channel: %s, message: %s",
                 pattern, channel, message));
+        String lotName = channel.replace(configuration.getRedisPatternChannelsPrefix(), "");
+        clientManager.tell(new NewLotState(lotName), ActorRef.noSender());
     }
 
     @Override
@@ -75,9 +75,10 @@ public class RedisSubscriber extends JedisPubSub implements Runnable {
     @Override
     public void run() {
         try {
-            jedis.subscribe(this, configuration.getRedisKeySpaceChannel());
+            jedis.psubscribe(this, configuration.getRedisPatternChannelsWildcard());
         } finally {
             //should never reach here since subscribe blocks forever, but anyways...
+            logger.severe("Redis subscriber about to close! Should never have gotten here!!");
             jedis.close();
         }
     }
