@@ -12,3 +12,7 @@ services:
       - redis-server
       - --notify-keyspace-events
       - AKE
+networks:
+  default:
+    external:
+      name: cpp-parking-net
