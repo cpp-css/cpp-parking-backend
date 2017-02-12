@@ -9,7 +9,10 @@ build:
 	bin/activator dist
 	docker build -t=$(IMAGE_PREFIX)/$(IMAGE_NAME):$(TAG) .
 
-run: remove
+net:
+	docker network ls | grep cpp-parking-net || docker network create cpp-parking-net
+
+run: remove net
 	#docker run --name=$(IMAGE_NAME) $(IMAGE_PREFIX)/$(IMAGE_NAME):$(TAG)
 	docker-compose up
 
