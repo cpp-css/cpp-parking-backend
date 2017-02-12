@@ -12,6 +12,7 @@ import akka.stream.OverflowStrategy;
 import akka.stream.javadsl.*;
 import annotations.MidnightSyncRunnable;
 import annotations.RedisSubscriberRunnable;
+import annotations.WebsocketKeepAliveRunnable;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
@@ -59,6 +60,7 @@ public class ParkingController extends Controller {
                              RedisUpdater redisUpdater,
                              @RedisSubscriberRunnable Runnable redisSubscriber,
                              @MidnightSyncRunnable Runnable midnightSync,
+                             @WebsocketKeepAliveRunnable Runnable keepalive,
                              Materializer materializer) {
 
         this.logger = logger;
@@ -71,6 +73,13 @@ public class ParkingController extends Controller {
         this.actorSystem.scheduler().scheduleOnce(
                 Duration.create(1, TimeUnit.NANOSECONDS),
                 redisSubscriber,
+                actorSystem.dispatcher()
+        );
+
+        //schedule keep alive thread to keep all websocket connections alive
+        this.actorSystem.scheduler().scheduleOnce(
+                Duration.create(1, TimeUnit.NANOSECONDS),
+                keepalive,
                 actorSystem.dispatcher()
         );
 

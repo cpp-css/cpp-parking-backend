@@ -7,6 +7,8 @@ import annotations.AllParkingState;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import models.DiffUpdate;
+import models.FullStateUpdate;
+import models.KeepAliveMessage;
 import models.ParkingLot;
 import play.libs.Json;
 import play.libs.akka.InjectedActorSupport;
@@ -60,7 +62,7 @@ public class ClientManager extends UntypedActor implements InjectedActorSupport 
         } else if (message instanceof ConnectionCreated) {
             clients.add(getSender());
             logger.info(String.format("Connection created, num connections: %d", clients.size()));
-            getSender().tell(Json.toJson(allParkingLotState), getSelf());
+            getSender().tell(Json.toJson(new FullStateUpdate(allParkingLotState)), getSelf());
         } else if (message instanceof ConnectionClosed) {
             clients.remove(getSender());
             logger.info(String.format("Connection closed, num connections: %d", clients.size()));
@@ -110,15 +112,17 @@ public class ClientManager extends UntypedActor implements InjectedActorSupport 
             tellAllClients(diffUpdate);
         } else if (message instanceof CurrentStateRequest) {
             getSender().tell(Json.toJson(allParkingLotState), getSelf());
+        } else if (message instanceof KeepAliveMessage) {
+            tellAllClients(message);
         } else {
             unhandled(message);
         }
 
     }
 
-    private void tellAllClients(DiffUpdate diffUpdate) {
+    private void tellAllClients(Object object) {
         for (ActorRef client : clients) {
-            client.tell(Json.toJson(diffUpdate), getSelf());
+            client.tell(Json.toJson(object), getSelf());
         }
     }
 }

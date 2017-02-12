@@ -275,6 +275,7 @@ We can change this endpoint to return a list of all parking lots instead of a ma
 *  **Success Response:**
     *  **Code:** 200
     *  **Response Body:** Initially, you receive the same json response as GET on /lots. However, **all subsequent server messages will be in the form:**
+   
        ```json
        {
          "lot": "A",

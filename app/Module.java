@@ -3,11 +3,13 @@ import actors.ClientManager;
 import annotations.AllParkingState;
 import annotations.MidnightSyncRunnable;
 import annotations.RedisSubscriberRunnable;
+import annotations.WebsocketKeepAliveRunnable;
 import com.google.inject.AbstractModule;
 import com.google.inject.TypeLiteral;
 import models.ParkingLot;
 import play.libs.akka.AkkaGuiceSupport;
 import providers.InitialParkingStateProvider;
+import services.KeepAlive;
 import services.MidnightSync;
 import services.RedisSubscriber;
 
@@ -40,6 +42,9 @@ public class Module extends AbstractModule implements AkkaGuiceSupport {
         bind(Runnable.class)
                 .annotatedWith(MidnightSyncRunnable.class)
                 .to(MidnightSync.class);
+        bind(Runnable.class)
+                .annotatedWith(WebsocketKeepAliveRunnable.class)
+                .to(KeepAlive.class);
         bindActorFactory(ClientActor.class, ClientActor.Factory.class);
     }
 
