@@ -308,7 +308,6 @@ This project requires Redis in order to run. To run locally, we suggest installi
  
 ```docker run -p 6379:6379 redis redis-server --notify-keyspace-events AKE```
  
- In addition, you have to change `<project-root>/conf/application.conf`'s `redis.host` value from `"redis"` to `"localhost"`.
 
 Finally, to run the project from the command line, execute ```activator compile``` from the project root. Then execute `activator run`. To see if everything works, go to `http://localhost:9000/lots` in your browser. You should see json corresponding to parking lot status. More detailed instructions can be found on the Play! framework website.
 

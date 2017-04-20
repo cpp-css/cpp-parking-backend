@@ -6,6 +6,8 @@ services:
      - "9000:9000"
     depends_on:
       - redis
+    environment:
+      - REDIS_HOST=redis
   redis:
     image: "redis:latest"
     entrypoint:
